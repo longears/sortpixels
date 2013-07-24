@@ -15,9 +15,13 @@ import (
 	"strings"
 )
 
+// How many times to repeat the vertical & horizontal sort step
 const N_SORTS = 6
 
+// How many threads to run in parallel
 var THREADPOOL_SIZE int
+
+// The random number generator
 var RNG *rand.Rand
 
 func init() {
@@ -27,29 +31,30 @@ func init() {
 }
 
 //================================================================================
-// SORTING
+// SORTING RIGAMAROLE
+// This is taken from https://github.com/daviddengcn/go-villa/blob/master/sort.go
 
-type sortMyColor struct {
+type sortI struct {
 	l    int
 	less func(int, int) bool
 	swap func(int, int)
 }
 
-func (s *sortMyColor) Len() int {
+func (s *sortI) Len() int {
 	return s.l
 }
 
-func (s *sortMyColor) Less(i, j int) bool {
+func (s *sortI) Less(i, j int) bool {
 	return s.less(i, j)
 }
 
-func (s *sortMyColor) Swap(i, j int) {
+func (s *sortI) Swap(i, j int) {
 	s.swap(i, j)
 }
 
 // SortF sorts the data defined by the length, Less and Swap functions.
 func SortF(Len int, Less func(int, int) bool, Swap func(int, int)) {
-	sort.Sort(&sortMyColor{l: Len, less: Less, swap: Swap})
+	sort.Sort(&sortI{l: Len, less: Less, swap: Swap})
 }
 
 //================================================================================
@@ -66,15 +71,21 @@ type MyColor struct {
 	sortValue float64
 }
 
+// Compute and set the sortValue for the MyColor object.
+// "kind" is the type of sort to do.  Use one of: random semirandom h h2 v s
 func (c *MyColor) setSortValue(kind string, ii int) {
 	switch kind {
 	case "random":
+		// totally randomize the order of the pixels
 		c.sortValue = RNG.Float64()
 	case "semirandom":
+		// move pixels plus or minus 100 pixels
 		c.sortValue = float64(ii)/4 + RNG.Float64()*25
 	case "h":
 		c.sortValue = c.h
 	case "h2":
+		// sort by hue unless saturation is too low.
+		// unsaturated pixels will sort to the front.
 		c.sortValue = c.h + 0.15
 		if c.sortValue > 1 {
 			c.sortValue -= 1
@@ -91,9 +102,9 @@ func (c *MyColor) setSortValue(kind string, ii int) {
 	}
 }
 
+// Read r, g b in the range 0-255; set h, s, v in the range 0-1.
+// Taken from http://stackoverflow.com/questions/8022885/rgb-to-hsv-color-in-javascript
 func (c *MyColor) computeHSV() {
-	// given r,g,b in the range 0-255,
-	// set h,s,v in the range 0-1
 	var h, s, v float64
 
 	r := float64(c.r) / 255
@@ -141,7 +152,7 @@ type MyImage struct {
 
 // Init the MyImage pixel array, creating MyColor objects
 // from the data in the given image (from the built-in image package).
-// HSV is computed here also.
+// HSV is computed here also for each pixel.
 func (i *MyImage) populateFromImage(img image.Image) {
 	i.xres = img.Bounds().Max.X
 	i.yres = img.Bounds().Max.Y
@@ -161,6 +172,11 @@ func (i *MyImage) String() string {
 	return fmt.Sprintf("<image %v x %v>", i.xres, i.yres)
 }
 
+// Read y coordinates over yChan and sort those rows.
+// Send 1 to doneChan when each row is done.
+// The image natively stores pixels in columns, not rows, so we
+// have to copy the pixels into a temporary slice, sort it, then
+// put it back.
 func goSortRow(i *MyImage, kind string, yChan chan int, doneChan chan int) {
 	row := make([]*MyColor, i.xres)
 	for y := range yChan {
@@ -180,7 +196,6 @@ func goSortRow(i *MyImage, kind string, yChan chan int, doneChan chan int) {
 				row[a], row[b] = row[b], row[a]
 			})
 		// copy back into main array
-		// set sort value
 		for x := 0; x < i.xres; x++ {
 			i.pixels[x][y] = row[x]
 		}
@@ -188,6 +203,8 @@ func goSortRow(i *MyImage, kind string, yChan chan int, doneChan chan int) {
 	}
 }
 
+// Launch some threads to sort the rows of the image.
+// Wait until complete, and kill the threads.
 func (i *MyImage) SortRows(kind string) {
 	yChan := make(chan int, i.yres+10)
 	doneChan := make(chan int, i.yres+10)
@@ -204,6 +221,10 @@ func (i *MyImage) SortRows(kind string) {
 	}
 }
 
+// Read slices of MyColor pointers over toSortChan and sort them.
+// Send 1 to doneChan when each row is done.
+// The image natively stores pixels in colums so we don't need to
+// create any temporary slices here.
 func goSortMyColorSlice(kind string, toSortChan chan []*MyColor, doneChan chan int) {
 	for colorSlice := range toSortChan {
 		// set sort value
@@ -223,6 +244,8 @@ func goSortMyColorSlice(kind string, toSortChan chan []*MyColor, doneChan chan i
 	}
 }
 
+// Launch some threads to sort the rows of the image.
+// Wait until complete, and kill the threads.
 func (i *MyImage) SortColumns(kind string) {
 	toSortChan := make(chan []*MyColor, i.xres+10)
 	doneChan := make(chan int, i.xres+10)
@@ -239,8 +262,9 @@ func (i *MyImage) SortColumns(kind string) {
 	}
 }
 
+// Create an image using the built-in image.RGBA type
+// and copy our pixels into it.
 func (i *MyImage) toBuiltInImage() image.Image {
-	// copy image to dest image (of type RGBA)
 	destImg := image.NewRGBA(image.Rectangle{image.ZP, image.Point{i.xres, i.yres}})
 	for x := 0; x < i.xres; x++ {
 		for y := 0; y < i.yres; y++ {
@@ -257,10 +281,14 @@ func (i *MyImage) toBuiltInImage() image.Image {
 
 func handleErr(err error) {
 	if err != nil {
-		panic(fmt.Sprintf("||| %v", err))
+		panic(fmt.Sprintf("%v", err))
 	}
 }
 
+// Read the image from the path inFn,
+// sort the pixels,
+// and save the result to the path outFn.
+// Return an error if the input file is not decodable as an image.
 func sortPixels(inFn, outFn string) error {
 	// open file and decode image
 	fmt.Println("  reading and decoding image")
@@ -269,6 +297,7 @@ func sortPixels(inFn, outFn string) error {
 	defer file.Close()
 	img, _, err := image.Decode(file)
 	if err != nil {
+		// couldn't decode; probably the file is not actually an image
 		return err
 	}
 
@@ -306,6 +335,7 @@ func sortPixels(inFn, outFn string) error {
 	return nil
 }
 
+// Check if a path exists or not.
 func Exists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -326,7 +356,7 @@ func main() {
 		fmt.Println()
 		fmt.Println("  usage:  sort  input.png  [input2.jpg input3.png ...]")
 		fmt.Println()
-		fmt.Println("  Sort the pixels in the image and save in the ./output/ folder.")
+		fmt.Println("  Sort the pixels in the image(s) and save to the ./output/ folder.")
 		fmt.Println()
 		return
 	}
@@ -354,7 +384,7 @@ func main() {
 		}
 		outFn = "output/" + outFn
 
-		// go (unless file has already been sorted)
+		// read, sort, and save (unless file has already been sorted)
 		fmt.Println(inFn)
 		if Exists(outFn) {
 			fmt.Println("  SKIPPING: already exists")
@@ -364,7 +394,10 @@ func main() {
 				fmt.Println("  oops, that wasn't an image.")
 			}
 		}
+
+		// attempt to give memory back to the OS
 		debug.FreeOSMemory()
+
 		fmt.Println()
 	}
 }
