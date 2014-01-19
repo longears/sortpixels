@@ -7,7 +7,8 @@ import (
 	"image"
 	"image/color"
 	_ "image/jpeg"
-	_ "image/png"
+	"image/png"
+	"os"
 )
 
 //================================================================================
@@ -19,10 +20,29 @@ type MyImage struct {
 	pixels [][]*mycolor.MyColor // 2d array, [x][y]
 }
 
+// Given a path to an image file on disk, return a MyImage struct.
+func MakeMyImageFromPath(path string) *MyImage {
+	// open file and decode image
+	fmt.Println("  reading and decoding image")
+	file, err := os.Open(path)
+	defer file.Close()
+	img, _, err := image.Decode(file)
+	if err != nil {
+		// couldn't decode; probably the file is not actually an image
+		fmt.Println("  can't decode image.")
+	}
+
+	// convert to MyImage
+	fmt.Println("  converting to MyImage")
+	myImage := &MyImage{}
+	myImage.populateFromNativeImage(img)
+	return myImage
+}
+
 // Init the MyImage pixel array, creating MyColor objects
 // from the data in the given image (from the built-in image package).
 // HSV is computed here also for each pixel.
-func (i *MyImage) PopulateFromImage(img image.Image) {
+func (i *MyImage) populateFromNativeImage(img image.Image) {
 	i.xres = img.Bounds().Max.X
 	i.yres = img.Bounds().Max.Y
 	i.pixels = make([][]*mycolor.MyColor, i.xres)
@@ -37,6 +57,28 @@ func (i *MyImage) PopulateFromImage(img image.Image) {
 	}
 }
 
+func handleErr(err error) {
+	if err != nil {
+		panic(fmt.Sprintf("%v", err))
+	}
+}
+
+func (i *MyImage) SaveAs(path string) {
+	// convert back to built in image
+	fmt.Println("  converting to built in image")
+	destImg := i.ToBuiltInImage()
+
+	// write output
+	fmt.Println("  writing to", path)
+	fo, err := os.Create(path)
+	handleErr(err)
+	defer func() {
+		err := fo.Close()
+		handleErr(err)
+	}()
+	png.Encode(fo, destImg)
+}
+
 func (i *MyImage) String() string {
 	return fmt.Sprintf("<image %v x %v>", i.xres, i.yres)
 }
@@ -46,7 +88,7 @@ func (i *MyImage) String() string {
 // The image natively stores pixels in columns, not rows, so we
 // have to copy the pixels into a temporary slice, sort it, then
 // put it back.
-func goSortRow(i *MyImage, kind string, yChan chan int, doneChan chan int) {
+func (i *MyImage) goSortRow(kind string, yChan chan int, doneChan chan int) {
 	row := make([]*mycolor.MyColor, i.xres)
 	for y := range yChan {
 		// copy into temp slice
@@ -78,7 +120,7 @@ func (i *MyImage) SortRows(kind string, numThreads int) {
 	yChan := make(chan int, i.yres+10)
 	doneChan := make(chan int, i.yres+10)
 	for threadNum := 0; threadNum < numThreads; threadNum++ {
-		go goSortRow(i, kind, yChan, doneChan)
+		go i.goSortRow(kind, yChan, doneChan)
 	}
 
 	for y := 0; y < i.yres; y++ {

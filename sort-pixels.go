@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/longears/sortpixels/myimage"
-	"image"
-	"image/png"
+	"github.com/longears/sortpixels/utils"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -23,75 +22,27 @@ func init() {
 }
 
 //================================================================================
-// MAIN
-
-func handleErr(err error) {
-	if err != nil {
-		panic(fmt.Sprintf("%v", err))
-	}
-}
+// IMAGE MODIFICATION ALGORITHMS
 
 // Read the image from the path inFn,
 // sort the pixels,
 // and save the result to the path outFn.
 // Return an error if the input file is not decodable as an image.
-func sortPixels(inFn, outFn string) error {
-	// open file and decode image
-	fmt.Println("  reading and decoding image")
-	file, err := os.Open(inFn)
-	handleErr(err)
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		// couldn't decode; probably the file is not actually an image
-		return err
-	}
+func sortPixels(inFn, outFn string) {
+	myImage := myimage.MakeMyImageFromPath(inFn)
 
-	// convert to MyImage
-	fmt.Println("  converting to MyImage")
-	myImage := &myimage.MyImage{}
-	myImage.PopulateFromImage(img)
-	img = nil
-
-	// sort
 	fmt.Println("  sorting")
-	//myImage.SortRows("semirandom", THREADPOOL_SIZE)
 	for ii := 0; ii < N_SORTS; ii++ {
-		//fmt.Println("   ", ii+1, "/", N_SORTS)
 		myImage.SortColumns("v", THREADPOOL_SIZE)
 		myImage.SortRows("h2", THREADPOOL_SIZE)
 	}
 	myImage.SortColumns("v", THREADPOOL_SIZE)
 
-	// convert back to built in image
-	fmt.Println("  converting to built in image")
-	destImg := myImage.ToBuiltInImage()
-	myImage = nil
-
-	// write output
-	fmt.Println("  writing to", outFn)
-	fo, err := os.Create(outFn)
-	handleErr(err)
-	defer func() {
-		err := fo.Close()
-		handleErr(err)
-	}()
-	png.Encode(fo, destImg)
-
-	return nil
+	myImage.SaveAs(outFn)
 }
 
-// Check if a path exists or not.
-func Exists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		} else {
-			panic(err)
-		}
-	}
-	return true
-}
+//================================================================================
+// MAIN
 
 func main() {
 	fmt.Println("------------------------------------------------------------\\")
@@ -108,9 +59,11 @@ func main() {
 	}
 
 	// make output directory if needed
-	if !Exists("output") {
+	if !utils.PathExists("output") {
 		err := os.Mkdir("output", 0755)
-		handleErr(err)
+		if err != nil {
+			panic(fmt.Sprintf("%v", err))
+		}
 	}
 
 	// open, sort, and save input images
@@ -132,13 +85,10 @@ func main() {
 
 		// read, sort, and save (unless file has already been sorted)
 		fmt.Println(inFn)
-		if Exists(outFn) {
+		if utils.PathExists(outFn) {
 			fmt.Println("  SKIPPING: already exists")
 		} else {
-			err := sortPixels(inFn, outFn)
-			if err != nil {
-				fmt.Println("  oops, that wasn't an image.")
-			}
+			sortPixels(inFn, outFn)
 		}
 
 		// attempt to give memory back to the OS

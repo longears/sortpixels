@@ -1,8 +1,21 @@
 package utils
 
 import (
+	"os"
 	"sort"
 )
+
+// Check if a path exists or not.
+func PathExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		} else {
+			panic(err)
+		}
+	}
+	return true
+}
 
 //================================================================================
 // SORTING RIGAMAROLE
