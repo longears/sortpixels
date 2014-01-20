@@ -1,7 +1,6 @@
 package mycolor
 
 import (
-	"math"
 	"math/rand"
 )
 
@@ -20,10 +19,10 @@ type MyColor struct {
 	G         uint8
 	B         uint8
 	A         uint8
-	H         float64
-	S         float64
-	V         float64
-	SortValue float64
+	H         float32
+	S         float32
+	V         float32
+	SortValue float32
 }
 
 // Compute and set the SortValue for the MyColor object.
@@ -32,10 +31,10 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 	switch kind {
 	case "random":
 		// totally randomize the order of the pixels
-		c.SortValue = RNG.Float64()
+		c.SortValue = RNG.Float32()
 	case "semirandom":
 		// move pixels plus or minus 100 pixels
-		c.SortValue = float64(ii)/4 + RNG.Float64()*25
+		c.SortValue = float32(ii)/4 + RNG.Float32()*25
 	case "h":
 		c.SortValue = c.H
 	case "h2":
@@ -49,7 +48,7 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 			c.SortValue -= 900
 		}
 	case "v":
-		c.SortValue = -(float64(c.R)/255*0.30 + float64(c.G)/255*0.59 + float64(c.B)/255*0.11)
+		c.SortValue = -(float32(c.R)/255*0.30 + float32(c.G)/255*0.59 + float32(c.B)/255*0.11)
 	case "s":
 		c.SortValue = c.S
 	default:
@@ -57,17 +56,49 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 	}
 }
 
+func threeMax(a float32, b float32, c float32) float32 {
+	if a > b {
+		if a > c {
+			return a
+		} else {
+			return c
+		}
+	} else {
+		if b > c {
+			return b
+		} else {
+			return c
+		}
+	}
+}
+
+func threeMin(a float32, b float32, c float32) float32 {
+	if a < b {
+		if a < c {
+			return a
+		} else {
+			return c
+		}
+	} else {
+		if b < c {
+			return b
+		} else {
+			return c
+		}
+	}
+}
+
 // Read r, g b in the range 0-255; set h, s, v in the range 0-1.
 // Taken from http://stackoverflow.com/questions/8022885/rgb-to-hsv-color-in-javascript
 func (c *MyColor) ComputeHSV() {
-	var h, s, v float64
+	var h, s, v float32
 
-	r := float64(c.R) / 255
-	g := float64(c.G) / 255
-	b := float64(c.B) / 255
+	r := float32(c.R) / 255
+	g := float32(c.G) / 255
+	b := float32(c.B) / 255
 
-	v = math.Max(r, math.Max(g, b))
-	diff := v - math.Min(r, math.Min(g, b))
+	v = threeMax(r, g, b)
+	diff := v - threeMin(r, g, b)
 
 	if diff == 0 {
 		h = 0
