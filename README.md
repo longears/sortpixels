@@ -24,5 +24,5 @@ Usage
 
 The resulting sorted images will be written into the `./output` subfolder (which is created if needed).  Images which are already in the output folder will be skipped.
 
-**Warning:** very large images (e.g. 2000 x 4000 pixels) can use a gigabyte of memory during sorting.
+**Warning:** very large images (e.g. 2000 x 4000 pixels) can use 500 MB of memory during sorting.
 
