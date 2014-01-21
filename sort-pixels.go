@@ -44,6 +44,10 @@ func sortPixels(inFn, outFn string) {
 func congregatePixels(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
 
+	fmt.Println("  scrambling")
+	myImage.SortColumns("random", THREADPOOL_SIZE)
+	myImage.SortRows("random", THREADPOOL_SIZE)
+
 	fmt.Println("  congregating")
 	for ii := 0; ii < 100; ii++ {
 		myImage.Congregate(10, 1.0)
