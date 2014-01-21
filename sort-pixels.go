@@ -41,6 +41,20 @@ func sortPixels(inFn, outFn string) {
 	myImage.SaveAs(outFn)
 }
 
+func congregatePixels(inFn, outFn string) {
+	myImage := myimage.MakeMyImageFromPath(inFn)
+
+	fmt.Println("  congregating")
+	for ii := 0; ii < 100; ii++ {
+		myImage.Congregate(10, 1.0)
+		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".jpg"
+		fmt.Println(tempFn)
+		myImage.SaveAs(tempFn)
+	}
+
+	myImage.SaveAs(outFn)
+}
+
 //================================================================================
 // MAIN
 
@@ -88,7 +102,8 @@ func main() {
 		if utils.PathExists(outFn) {
 			fmt.Println("  SKIPPING: already exists")
 		} else {
-			sortPixels(inFn, outFn)
+			//sortPixels(inFn, outFn)
+			congregatePixels(inFn, outFn)
 		}
 
 		// attempt to give memory back to the OS

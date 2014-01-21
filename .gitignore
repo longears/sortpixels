@@ -23,6 +23,10 @@ _testmain.go
 
 *.exe
 
+# data folders
 input/*
 output/*
+results/*
+
+# binaries
 sort-pixels

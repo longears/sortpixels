@@ -8,8 +8,17 @@ import (
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
+	"math"
+	"math/rand"
 	"os"
 )
+
+// The random number generator
+var RNG *rand.Rand
+
+func init() {
+	RNG = rand.New(rand.NewSource(99))
+}
 
 //================================================================================
 // IMAGE
@@ -79,9 +88,26 @@ func (i *MyImage) SaveAs(path string) {
 	png.Encode(fo, destImg)
 }
 
+// Create an image using the built-in image.RGBA type
+// and copy our pixels into it.
+func (i *MyImage) ToBuiltInImage() image.Image {
+	destImg := image.NewRGBA(image.Rectangle{image.ZP, image.Point{i.xres, i.yres}})
+	for x := 0; x < i.xres; x++ {
+		for y := 0; y < i.yres; y++ {
+			myColor := i.pixels[x][y]
+			rgba := color.RGBA{uint8(myColor.R), uint8(myColor.G), uint8(myColor.B), uint8(myColor.A)}
+			destImg.Set(x, y, rgba)
+		}
+	}
+	return destImg
+}
+
 func (i *MyImage) String() string {
 	return fmt.Sprintf("<image %v x %v>", i.xres, i.yres)
 }
+
+//================================================================================
+// SORTING
 
 // Read y coordinates over yChan and sort those rows.
 // Send 1 to doneChan when each row is done.
@@ -173,16 +199,87 @@ func (i *MyImage) SortColumns(kind string, numThreads int) {
 	}
 }
 
-// Create an image using the built-in image.RGBA type
-// and copy our pixels into it.
-func (i *MyImage) ToBuiltInImage() image.Image {
-	destImg := image.NewRGBA(image.Rectangle{image.ZP, image.Point{i.xres, i.yres}})
-	for x := 0; x < i.xres; x++ {
-		for y := 0; y < i.yres; y++ {
-			myColor := i.pixels[x][y]
-			rgba := color.RGBA{uint8(myColor.R), uint8(myColor.G), uint8(myColor.B), uint8(myColor.A)}
-			destImg.Set(x, y, rgba)
+//================================================================================
+// CONGREGATE
+
+type kernelElem struct {
+	x        int
+	y        int
+	strength float64
+}
+
+func makeKernel(radius int) []kernelElem {
+	// MAKE KERNEL
+	// kernel is a list of x,y,strength
+	kernel := make([]kernelElem, 1)
+	for x := -radius; x <= radius; x++ {
+		for y := -radius; y <= radius; y++ {
+			if x == 0 && y == 0 {
+				continue
+			}
+			dist := math.Hypot(float64(x), float64(y)) / float64(radius)
+			strength := 1.0 / (dist*dist + 0.2)
+			kernel = append(kernel, kernelElem{x, y, strength})
 		}
 	}
-	return destImg
+	return kernel
+}
+
+// Return a float between 0 and 1 indicating how similar the colors are.
+func colorSimilarity(a *mycolor.MyColor, b *mycolor.MyColor) float64 {
+	return 1.0 - (math.Abs(float64(a.H-b.H))+math.Abs(float64(a.S-b.S))+math.Abs(float64(a.V-b.V)))/3.0
+}
+
+// Given a color, a coordinate, and a kernel, compute the fitness
+// of that color at that location (compared to its neighbors)
+func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, kernel []kernelElem) float64 {
+	totalStrength := float64(0)
+	totalFitness := float64(0)
+	for _, elem := range kernel {
+		thisX := elem.x + x
+		thisY := elem.y + y
+		if thisX < 0 || thisX >= i.xres {
+			continue
+		}
+		if thisY < 0 || thisY >= i.yres {
+			continue
+		}
+		otherColor := i.pixels[thisX][thisY]
+		totalFitness += colorSimilarity(color, otherColor) * elem.strength
+		totalStrength += elem.strength
+	}
+	return totalFitness / totalStrength
+}
+
+// Modify the image in-place by swapping pixels to places where they match their neighbors.
+func (i *MyImage) Congregate(kernelRadius int, numIters float64) {
+	kernel := makeKernel(kernelRadius)
+	numPixels := int(numIters * float64(i.xres*i.yres))
+
+	for ii := 0; ii < numPixels; ii++ {
+		if ii%2000 == 0 {
+			pctDone := float64(int(float64(ii)/float64(numPixels)*1000)) / 10
+			fmt.Println(pctDone)
+		}
+
+		// choose two random pixels
+		x1 := RNG.Intn(i.xres)
+		y1 := RNG.Intn(i.yres)
+		x2 := RNG.Intn(i.xres)
+		y2 := RNG.Intn(i.yres)
+		if x1 == x2 && y1 == y2 {
+			ii -= 1
+			continue
+		}
+		c1 := i.pixels[x1][y1]
+		c2 := i.pixels[x2][y2]
+
+		// if swapping them would improve their total fitness, swap them
+		originalFitness := i.pixelFitness(c1, x1, y1, kernel) + i.pixelFitness(c2, x2, y2, kernel)
+		swappedFitness := i.pixelFitness(c2, x1, y1, kernel) + i.pixelFitness(c1, x2, y2, kernel)
+		if swappedFitness > originalFitness {
+			i.pixels[x1][y1] = c2
+			i.pixels[x2][y2] = c1
+		}
+	}
 }
