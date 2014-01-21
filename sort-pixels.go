@@ -53,7 +53,7 @@ func congregatePixels(inFn, outFn string) {
 		myImage.Congregate(5, 25) // thumb size in pixels, percent of image visited per iteration
 		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".png"
 		fmt.Println(tempFn)
-		myImage.SaveAs(tempFn)
+		//myImage.SaveAs(tempFn)
 	}
 
 	//fmt.Println("  showing thumb")

@@ -41,7 +41,7 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 			c.SortValue -= 900
 		}
 	case "v":
-		c.SortValue = -(float32(c.R)/255*0.30 + float32(c.G)/255*0.59 + float32(c.B)/255*0.11)
+		c.SortValue = c.V
 	case "s":
 		c.SortValue = c.S
 	default:
@@ -115,6 +115,7 @@ func (c *MyColor) ComputeHSV() {
 			h -= 1
 		}
 	}
+	v = float32(c.R)/255*0.30 + float32(c.G)/255*0.59 + float32(c.B)/255*0.11
 	c.H = h
 	c.S = s
 	c.V = v

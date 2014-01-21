@@ -276,7 +276,8 @@ func (i *MyImage) thumbPixelFitness(color *mycolor.MyColor, x int, y int, thumb 
 }
 
 func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
-	idealRad := 1.0 - float64(color.V)
+	idealRad := 1 - (float64(color.S)+float64(color.V))/2
+	idealRad *= 1
 	idealTheta := float64(color.H) * 2 * math.Pi
 	idealX := math.Cos(idealTheta) * idealRad // 0 at the top
 	idealY := math.Sin(idealTheta) * idealRad
@@ -284,7 +285,7 @@ func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int, thu
 	idealY = (idealY/2.0 + 0.5) * float64(i.yres)
 	//idealX := float64(color.H) * float64(i.xres)
 	//idealY := float64(color.V) * float64(i.yres)
-	return -math.Hypot(math.Abs(float64(x)-idealX), math.Abs(float64(y)-idealY))
+	return -math.Pow(math.Hypot(float64(x)-idealX, float64(y)-idealY), 2)
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
