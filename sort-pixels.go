@@ -49,8 +49,8 @@ func congregatePixels(inFn, outFn string) {
 	////myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  congregating")
-	for ii := 0; ii < 5; ii++ {
-		myImage.Congregate(7, 50) // thumb size in pixels, percent of image visited per iteration
+	for ii := 0; ii < 10; ii++ {
+		myImage.Congregate(5, 25) // thumb size in pixels, percent of image visited per iteration
 		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".png"
 		fmt.Println(tempFn)
 		//myImage.SaveAs(tempFn)
