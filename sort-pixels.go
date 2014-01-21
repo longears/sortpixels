@@ -44,17 +44,20 @@ func sortPixels(inFn, outFn string) {
 func congregatePixels(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
 
-	//fmt.Println("  scrambling")
-	//myImage.SortColumns("random", THREADPOOL_SIZE)
-	//myImage.SortRows("random", THREADPOOL_SIZE)
+	////fmt.Println("  scrambling")
+	////myImage.SortColumns("random", THREADPOOL_SIZE)
+	////myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  congregating")
-	for ii := 0; ii < 100; ii++ {
-		myImage.Congregate(10, 0.1, 1.0) // radius, coverage percent, percent of image visited per iteration
-		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".jpg"
+	for ii := 0; ii < 3; ii++ {
+		myImage.Congregate(0.01, 100) // thumb size, percent of image visited per iteration
+		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".png"
 		fmt.Println(tempFn)
 		myImage.SaveAs(tempFn)
 	}
+
+	//fmt.Println("  showing thumb")
+	//myImage.ShowThumb(0.01)
 
 	myImage.SaveAs(outFn)
 }
@@ -92,7 +95,7 @@ func main() {
 		outFn := inFn
 		if strings.Contains(outFn, ".") {
 			dotii := strings.LastIndex(outFn, ".")
-			outFn = outFn[:dotii] + ".sorted." + outFn[dotii+1:]
+			outFn = outFn[:dotii] + ".sorted.png"
 		} else {
 			outFn += ".sorted"
 		}

@@ -99,6 +99,74 @@ func (i *MyImage) String() string {
 	return fmt.Sprintf("<image %v x %v>", i.xres, i.yres)
 }
 
+// Return a new image which has a size of (ratio * original_image_size)
+func (i *MyImage) Thumbnail(ratio float64) *MyImage {
+	thumb := &MyImage{}
+	thumb.xres = int(float64(i.xres) * ratio)
+	thumb.yres = int(float64(i.yres) * ratio)
+	thumb.pixels = make([][]*mycolor.MyColor, thumb.xres)
+
+	// for each pixel in the thumbnail...
+	for tx := 0; tx < thumb.xres; tx++ {
+		thumb.pixels[tx] = make([]*mycolor.MyColor, thumb.yres)
+		originalMinX := int(float64(tx) / float64(thumb.xres) * float64(i.xres))
+		originalMaxX := int(float64(tx+1) / float64(thumb.xres) * float64(i.xres))
+		for ty := 0; ty < thumb.yres; ty++ {
+			originalMinY := int(float64(ty) / float64(thumb.yres) * float64(i.yres))
+			originalMaxY := int(float64(ty+1) / float64(thumb.yres) * float64(i.yres))
+			// average together the corresponding pixels in the original
+			totalR := 0
+			totalG := 0
+			totalB := 0
+			numPixels := 0
+			for ox := originalMinX; ox < originalMaxX; ox++ {
+				for oy := originalMinY; oy < originalMaxY; oy++ {
+					c := i.pixels[ox][oy]
+					totalR += int(c.R)
+					totalG += int(c.G)
+					totalB += int(c.B)
+					numPixels += 1
+				}
+			}
+			avgColor := &mycolor.MyColor{}
+			avgColor.R = uint8(float64(totalR) / float64(numPixels))
+			avgColor.G = uint8(float64(totalG) / float64(numPixels))
+			avgColor.B = uint8(float64(totalB) / float64(numPixels))
+			avgColor.A = 255 // TODO: handle alpha more carefully
+			avgColor.ComputeHSV()
+			thumb.pixels[tx][ty] = avgColor
+		}
+	}
+
+	return thumb
+}
+
+// Return an interpolated pixel value from the image.
+// x and y values outside the image will return the value from the
+// nearest point in the image.
+func (i *MyImage) GetColorWithLinearInterpolation(x float64, y float64) *mycolor.MyColor {
+	// the 4 neighboring pixel indices
+	x0 := utils.IntClamp(int(x-0.5), 0, i.xres-1)
+	x1 := utils.IntClamp(int(x+0.5), 0, i.xres-1)
+	y0 := utils.IntClamp(int(y-0.5), 0, i.yres-1)
+	y1 := utils.IntClamp(int(y+0.5), 0, i.yres-1)
+
+	// percent of the way from x0 to x1
+	xPct := (x - 0.5) - float64(int(x-0.5))
+	yPct := (y - 0.5) - float64(int(y-0.5))
+	// get pixels and interpolate
+	c00 := i.pixels[x0][y0]
+	c01 := i.pixels[x0][y1]
+	c10 := i.pixels[x1][y0]
+	c11 := i.pixels[x1][y1]
+	r := uint8((float64(c00.R)*(1-xPct)+float64(c10.R)*xPct)*(1-yPct) + (float64(c01.R)*(1-xPct)+float64(c11.R)*xPct)*yPct)
+	g := uint8((float64(c00.G)*(1-xPct)+float64(c10.G)*xPct)*(1-yPct) + (float64(c01.G)*(1-xPct)+float64(c11.G)*xPct)*yPct)
+	b := uint8((float64(c00.B)*(1-xPct)+float64(c10.B)*xPct)*(1-yPct) + (float64(c01.B)*(1-xPct)+float64(c11.B)*xPct)*yPct)
+	cResult := &mycolor.MyColor{r, g, b, 255, 0, 0, 0, 0}
+	cResult.ComputeHSV()
+	return cResult
+}
+
 //================================================================================
 // SORTING
 
@@ -195,77 +263,33 @@ func (i *MyImage) SortColumns(kind string, numThreads int) {
 //================================================================================
 // CONGREGATE
 
-type kernelElem struct {
-	x        int
-	y        int
-	strength float64
-}
-
-func makeKernel(radius int) []kernelElem {
-	// MAKE KERNEL
-	// kernel is a list of x,y,strength
-	kernel := make([]kernelElem, 1)
-	for x := -radius; x <= radius; x++ {
-		for y := -radius; y <= radius; y++ {
-			if x == 0 && y == 0 {
-				continue
-			}
-			dist := math.Hypot(float64(x), float64(y)) / float64(radius)
-			strength := 1.0 / (dist*dist + 0.2)
-			kernel = append(kernel, kernelElem{x, y, strength})
-		}
-	}
-	return kernel
-}
-
 // Return a float between 0 and 1 indicating how similar the colors are.
 func colorSimilarity(a *mycolor.MyColor, b *mycolor.MyColor) float64 {
-	return 1.0 - (math.Abs(float64(a.H-b.H))+math.Abs(float64(a.S-b.S))+math.Abs(float64(a.V-b.V)))/3.0
+	return 1.0 - (1.5*math.Abs(float64(a.H-b.H))+0.5*math.Abs(float64(a.S-b.S))+math.Abs(float64(a.V-b.V)))/3.0
 }
 
-// Given a color, a coordinate, and a kernel, compute the fitness
-// of that color at that location (compared to its neighbors)
-func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, kernel []kernelElem, kernelCoverage float64) float64 {
-	totalStrength := float64(0)
-	totalFitness := float64(0)
-	stopII := int(kernelCoverage * float64(len(kernel)))
-	for ii, elem := range kernel {
-		if ii > stopII {
-			break
-		}
-		thisX := elem.x + x
-		thisY := elem.y + y
-		if thisX < 0 || thisX >= i.xres {
-			continue
-		}
-		if thisY < 0 || thisY >= i.yres {
-			continue
-		}
-		otherColor := i.pixels[thisX][thisY]
-		totalFitness += colorSimilarity(color, otherColor) * elem.strength
-		totalStrength += elem.strength
-	}
-	return totalFitness / totalStrength
+func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
+	thumbX := float64(x) * float64(thumb.xres) / float64(i.xres)
+	thumbY := float64(y) * float64(thumb.yres) / float64(i.yres)
+	thumbColor := thumb.GetColorWithLinearInterpolation(thumbX, thumbY)
+	return colorSimilarity(color, thumbColor)
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
-func (i *MyImage) Congregate(kernelRadius int, kernelCoverage float64, numIters float64) {
-	kernel := makeKernel(kernelRadius)
-	numPixels := int(numIters * float64(i.xres*i.yres))
+func (i *MyImage) Congregate(thumbSize float64, numIters float64) {
+	thumb := i.Thumbnail(thumbSize)
 
+	numPixels := int(numIters * float64(i.xres*i.yres))
 	for ii := 0; ii < numPixels; ii++ {
-		if ii%10000 == 0 {
+		if ii%300000 == 0 {
 			pctDone := float64(int(float64(ii)/float64(numPixels)*1000)) / 10
 			fmt.Println(pctDone)
 		}
 
-		// occasionally shuffle the kernel
-		if ii%32 == 0 {
-			for jj := range kernel {
-				kk := rand.Intn(jj + 1)
-				kernel[jj], kernel[kk] = kernel[kk], kernel[jj]
-			}
-		}
+		//// occasionally re-make the thumbnail
+		//if ii%1000 == 0 {
+		//    thumb := i.Thumbnail(0.1)
+		//}
 
 		// choose two random pixels
 		x1 := rand.Intn(i.xres)
@@ -280,11 +304,25 @@ func (i *MyImage) Congregate(kernelRadius int, kernelCoverage float64, numIters 
 		c2 := i.pixels[x2][y2]
 
 		// if swapping them would improve their total fitness, swap them
-		originalFitness := i.pixelFitness(c1, x1, y1, kernel, kernelCoverage) + i.pixelFitness(c2, x2, y2, kernel, kernelCoverage)
-		swappedFitness := i.pixelFitness(c2, x1, y1, kernel, kernelCoverage) + i.pixelFitness(c1, x2, y2, kernel, kernelCoverage)
+		originalFitness := i.pixelFitness(c1, x1, y1, thumb) + i.pixelFitness(c2, x2, y2, thumb)
+		swappedFitness := i.pixelFitness(c2, x1, y1, thumb) + i.pixelFitness(c1, x2, y2, thumb)
 		if swappedFitness > originalFitness {
 			i.pixels[x1][y1] = c2
 			i.pixels[x2][y2] = c1
+		}
+	}
+
+}
+
+func (i *MyImage) ShowThumb(thumbSize float64) {
+	thumb := i.Thumbnail(thumbSize)
+
+	for x := 0; x < i.xres; x++ {
+		for y := 0; y < i.yres; y++ {
+			thumbX := float64(x) * float64(thumb.xres) / float64(i.xres)
+			thumbY := float64(y) * float64(thumb.yres) / float64(i.yres)
+			thumbColor := thumb.GetColorWithLinearInterpolation(thumbX, thumbY)
+			i.pixels[x][y] = thumbColor
 		}
 	}
 }

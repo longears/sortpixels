@@ -17,6 +17,16 @@ func PathExists(path string) bool {
 	return true
 }
 
+// return val clamped to be between min and max (inclusive)
+func IntClamp(val int, min int, max int) int {
+	if val < min {
+		return min
+	} else if val > max {
+		return max
+	}
+	return val
+}
+
 //================================================================================
 // SORTING RIGAMAROLE
 // This is taken from https://github.com/daviddengcn/go-villa/blob/master/sort.go
