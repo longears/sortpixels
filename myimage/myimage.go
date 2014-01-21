@@ -13,13 +13,6 @@ import (
 	"os"
 )
 
-// The random number generator
-var RNG *rand.Rand
-
-func init() {
-	RNG = rand.New(rand.NewSource(99))
-}
-
 //================================================================================
 // IMAGE
 
@@ -263,10 +256,10 @@ func (i *MyImage) Congregate(kernelRadius int, numIters float64) {
 		}
 
 		// choose two random pixels
-		x1 := RNG.Intn(i.xres)
-		y1 := RNG.Intn(i.yres)
-		x2 := RNG.Intn(i.xres)
-		y2 := RNG.Intn(i.yres)
+		x1 := rand.Intn(i.xres)
+		y1 := rand.Intn(i.yres)
+		x2 := rand.Intn(i.xres)
+		y2 := rand.Intn(i.yres)
 		if x1 == x2 && y1 == y2 {
 			ii -= 1
 			continue

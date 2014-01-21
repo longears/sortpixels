@@ -4,13 +4,6 @@ import (
 	"math/rand"
 )
 
-// The random number generator
-var RNG *rand.Rand
-
-func init() {
-	RNG = rand.New(rand.NewSource(99))
-}
-
 //================================================================================
 // COLOR
 
@@ -31,10 +24,10 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 	switch kind {
 	case "random":
 		// totally randomize the order of the pixels
-		c.SortValue = RNG.Float32()
+		c.SortValue = rand.Float32()
 	case "semirandom":
 		// move pixels plus or minus 100 pixels
-		c.SortValue = float32(ii)/4 + RNG.Float32()*25
+		c.SortValue = float32(ii)/4 + rand.Float32()*25
 	case "h":
 		c.SortValue = c.H
 	case "h2":
