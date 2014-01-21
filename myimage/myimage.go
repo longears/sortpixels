@@ -276,8 +276,9 @@ func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyIm
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
-func (i *MyImage) Congregate(thumbSize float64, numIters float64) {
-	thumb := i.Thumbnail(thumbSize)
+func (i *MyImage) Congregate(thumbPixels int, numIters float64) {
+	thumbRatio := (float64(thumbPixels) + 0.01) / float64(utils.IntMin(i.xres, i.yres))
+	thumb := i.Thumbnail(thumbRatio)
 
 	numPixels := int(numIters * float64(i.xres*i.yres))
 	for ii := 0; ii < numPixels; ii++ {

@@ -27,6 +27,13 @@ func IntClamp(val int, min int, max int) int {
 	return val
 }
 
+func IntMin(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 //================================================================================
 // SORTING RIGAMAROLE
 // This is taken from https://github.com/daviddengcn/go-villa/blob/master/sort.go

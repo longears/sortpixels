@@ -26,6 +26,7 @@ _testmain.go
 # data folders
 input/*
 output/*
+output_*/*
 results/*
 
 # binaries
