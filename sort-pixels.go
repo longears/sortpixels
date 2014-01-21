@@ -44,13 +44,13 @@ func sortPixels(inFn, outFn string) {
 func congregatePixels(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
 
-	fmt.Println("  scrambling")
-	myImage.SortColumns("random", THREADPOOL_SIZE)
-	myImage.SortRows("random", THREADPOOL_SIZE)
+	//fmt.Println("  scrambling")
+	//myImage.SortColumns("random", THREADPOOL_SIZE)
+	//myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  congregating")
 	for ii := 0; ii < 100; ii++ {
-		myImage.Congregate(10, 1.0)
+		myImage.Congregate(10, 0.1, 1.0) // radius, coverage percent, percent of image visited per iteration
 		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".jpg"
 		fmt.Println(tempFn)
 		myImage.SaveAs(tempFn)

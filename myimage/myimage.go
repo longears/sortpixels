@@ -225,10 +225,14 @@ func colorSimilarity(a *mycolor.MyColor, b *mycolor.MyColor) float64 {
 
 // Given a color, a coordinate, and a kernel, compute the fitness
 // of that color at that location (compared to its neighbors)
-func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, kernel []kernelElem) float64 {
+func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, kernel []kernelElem, kernelCoverage float64) float64 {
 	totalStrength := float64(0)
 	totalFitness := float64(0)
-	for _, elem := range kernel {
+	stopII := int(kernelCoverage * float64(len(kernel)))
+	for ii, elem := range kernel {
+		if ii > stopII {
+			break
+		}
 		thisX := elem.x + x
 		thisY := elem.y + y
 		if thisX < 0 || thisX >= i.xres {
@@ -245,14 +249,22 @@ func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, kernel []ke
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
-func (i *MyImage) Congregate(kernelRadius int, numIters float64) {
+func (i *MyImage) Congregate(kernelRadius int, kernelCoverage float64, numIters float64) {
 	kernel := makeKernel(kernelRadius)
 	numPixels := int(numIters * float64(i.xres*i.yres))
 
 	for ii := 0; ii < numPixels; ii++ {
-		if ii%2000 == 0 {
+		if ii%10000 == 0 {
 			pctDone := float64(int(float64(ii)/float64(numPixels)*1000)) / 10
 			fmt.Println(pctDone)
+		}
+
+		// occasionally shuffle the kernel
+		if ii%32 == 0 {
+			for jj := range kernel {
+				kk := rand.Intn(jj + 1)
+				kernel[jj], kernel[kk] = kernel[kk], kernel[jj]
+			}
 		}
 
 		// choose two random pixels
@@ -268,8 +280,8 @@ func (i *MyImage) Congregate(kernelRadius int, numIters float64) {
 		c2 := i.pixels[x2][y2]
 
 		// if swapping them would improve their total fitness, swap them
-		originalFitness := i.pixelFitness(c1, x1, y1, kernel) + i.pixelFitness(c2, x2, y2, kernel)
-		swappedFitness := i.pixelFitness(c2, x1, y1, kernel) + i.pixelFitness(c1, x2, y2, kernel)
+		originalFitness := i.pixelFitness(c1, x1, y1, kernel, kernelCoverage) + i.pixelFitness(c2, x2, y2, kernel, kernelCoverage)
+		swappedFitness := i.pixelFitness(c2, x1, y1, kernel, kernelCoverage) + i.pixelFitness(c1, x2, y2, kernel, kernelCoverage)
 		if swappedFitness > originalFitness {
 			i.pixels[x1][y1] = c2
 			i.pixels[x2][y2] = c1
