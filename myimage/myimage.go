@@ -268,11 +268,23 @@ func colorSimilarity(a *mycolor.MyColor, b *mycolor.MyColor) float64 {
 	return 1.0 - (1.5*math.Abs(float64(a.H-b.H))+0.5*math.Abs(float64(a.S-b.S))+math.Abs(float64(a.V-b.V)))/3.0
 }
 
-func (i *MyImage) pixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
+func (i *MyImage) thumbPixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
 	thumbX := float64(x) * float64(thumb.xres) / float64(i.xres)
 	thumbY := float64(y) * float64(thumb.yres) / float64(i.yres)
 	thumbColor := thumb.GetColorWithLinearInterpolation(thumbX, thumbY)
 	return colorSimilarity(color, thumbColor)
+}
+
+func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
+	idealRad := 1.0 - float64(color.V)
+	idealTheta := float64(color.H) * 2 * math.Pi
+	idealX := math.Cos(idealTheta) * idealRad // 0 at the top
+	idealY := math.Sin(idealTheta) * idealRad
+	idealX = (idealX/2.0 + 0.5) * float64(i.xres)
+	idealY = (idealY/2.0 + 0.5) * float64(i.yres)
+	//idealX := float64(color.H) * float64(i.xres)
+	//idealY := float64(color.V) * float64(i.yres)
+	return -math.Hypot(math.Abs(float64(x)-idealX), math.Abs(float64(y)-idealY))
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
@@ -305,8 +317,8 @@ func (i *MyImage) Congregate(thumbPixels int, numIters float64) {
 		c2 := i.pixels[x2][y2]
 
 		// if swapping them would improve their total fitness, swap them
-		originalFitness := i.pixelFitness(c1, x1, y1, thumb) + i.pixelFitness(c2, x2, y2, thumb)
-		swappedFitness := i.pixelFitness(c2, x1, y1, thumb) + i.pixelFitness(c1, x2, y2, thumb)
+		originalFitness := i.colorPosPixelFitness(c1, x1, y1, thumb) + i.colorPosPixelFitness(c2, x2, y2, thumb)
+		swappedFitness := i.colorPosPixelFitness(c2, x1, y1, thumb) + i.colorPosPixelFitness(c1, x2, y2, thumb)
 		if swappedFitness > originalFitness {
 			i.pixels[x1][y1] = c2
 			i.pixels[x2][y2] = c1
