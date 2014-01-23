@@ -115,7 +115,21 @@ func (c *MyColor) ComputeHSV() {
 			h -= 1
 		}
 	}
+
+	// perceptual tricks
+	// human eye thinks some colors are brighter than others
 	v = float32(c.R)/255*0.30 + float32(c.G)/255*0.59 + float32(c.B)/255*0.11
+	// if val is too high or low, blend sat down to zero
+	if v < 0.1 {
+		s *= v / 0.1
+	}
+	if v > 0.9 {
+		s *= (1 - v) / 0.1
+	}
+	// if sat is too low, blend hue down to zero
+	if s < 0.2 {
+		h *= s / 0.2
+	}
 	c.H = h
 	c.S = s
 	c.V = v
