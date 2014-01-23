@@ -52,9 +52,9 @@ func congregatePixels(inFn, outFn string) {
 	myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  congregating (large scale)")
-	myImage.Congregate(0, 40) // maxMoveDist, percent of image visited per iteration
+	myImage.Congregate(0, 55) // maxMoveDist, percent of image visited per iteration
 	fmt.Println("  congregating (small scale)")
-	myImage.Congregate(8, 80) // maxMoveDist, percent of image visited per iteration
+	myImage.Congregate(8, 75) // maxMoveDist, percent of image visited per iteration
 
 	myImage.SaveAs(outFn)
 }

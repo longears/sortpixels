@@ -314,7 +314,7 @@ func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int) flo
 func (i *MyImage) Congregate(maxMoveDist int, numIters float64) {
 	numPixels := int(numIters * float64(i.xres*i.yres))
 	for ii := 0; ii < numPixels; ii++ {
-		if ii%300000 == 0 {
+		if ii%1000000 == 0 {
 			pctDone := float64(int(float64(ii)/float64(numPixels)*1000)) / 10
 			fmt.Println(pctDone)
 		}
