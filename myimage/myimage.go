@@ -99,8 +99,19 @@ func (i *MyImage) String() string {
 	return fmt.Sprintf("<image %v x %v>", i.xres, i.yres)
 }
 
+// Return a new image which fits in a square of maxRes x maxRes pixels but keeps the same aspect ratio.
+// If the image is already small enough, just return the same image again.
+func (i *MyImage) ThumbnailByPixels(maxRes int) *MyImage {
+	currMaxRes := utils.IntMax(i.xres, i.yres)
+	if currMaxRes <= maxRes {
+		return i
+	}
+	ratio := float64(maxRes) / float64(currMaxRes)
+	return i.ThumbnailByRatio(ratio)
+}
+
 // Return a new image which has a size of (ratio * original_image_size)
-func (i *MyImage) Thumbnail(ratio float64) *MyImage {
+func (i *MyImage) ThumbnailByRatio(ratio float64) *MyImage {
 	thumb := &MyImage{}
 	thumb.xres = int(float64(i.xres) * ratio)
 	thumb.yres = int(float64(i.yres) * ratio)
@@ -289,7 +300,8 @@ func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int) flo
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
-func (i *MyImage) Congregate(numIters float64) {
+// maxMoveDist is the max distance between two swapped pixels.  If 0, there is no limit.
+func (i *MyImage) Congregate(maxMoveDist int, numIters float64) {
 	numPixels := int(numIters * float64(i.xres*i.yres))
 	for ii := 0; ii < numPixels; ii++ {
 		if ii%300000 == 0 {
@@ -297,11 +309,23 @@ func (i *MyImage) Congregate(numIters float64) {
 			fmt.Println(pctDone)
 		}
 
-		// choose two random pixels
 		x1 := rand.Intn(i.xres)
 		y1 := rand.Intn(i.yres)
-		x2 := rand.Intn(i.xres)
-		y2 := rand.Intn(i.yres)
+		x2, y2 := 0, 0
+		if maxMoveDist <= 0 {
+			// choose a pixel from anywhere in the while image
+			x2 = rand.Intn(i.xres)
+			y2 = rand.Intn(i.yres)
+		} else {
+			// choose a nearby pixel
+			dx, dy := 99999999, 99999999
+			for dx+x1 < 0 || dx+x1 >= i.xres || dy+y1 < 0 || dy+y1 >= i.yres {
+				dx = rand.Intn(maxMoveDist*2+1) - maxMoveDist
+				dy = rand.Intn(maxMoveDist*2+1) - maxMoveDist
+			}
+			x2 = x1 + dx
+			y2 = y1 + dy
+		}
 		if x1 == x2 && y1 == y2 {
 			ii -= 1
 			continue
@@ -321,7 +345,7 @@ func (i *MyImage) Congregate(numIters float64) {
 }
 
 func (i *MyImage) ShowThumb(thumbSize float64) {
-	thumb := i.Thumbnail(thumbSize)
+	thumb := i.ThumbnailByRatio(thumbSize)
 
 	for x := 0; x < i.xres; x++ {
 		for y := 0; y < i.yres; y++ {

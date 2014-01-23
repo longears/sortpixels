@@ -28,6 +28,7 @@ input/*
 output/*
 output_*/*
 results/*
+input_ignore/*
 
 # binaries
 sort-pixels
