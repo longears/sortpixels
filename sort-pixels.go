@@ -43,6 +43,8 @@ func sortPixels(inFn, outFn string) {
 
 func congregatePixels(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
+
+	fmt.Println("  resizing")
 	myImage = myImage.ThumbnailByPixels(512)
 
 	fmt.Println("  scrambling")

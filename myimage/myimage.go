@@ -130,15 +130,25 @@ func (i *MyImage) ThumbnailByRatio(ratio float64) *MyImage {
 			totalG := 0
 			totalB := 0
 			numPixels := 0
-			for ox := originalMinX; ox < originalMaxX; ox++ {
-				for oy := originalMinY; oy < originalMaxY; oy++ {
-					c := i.pixels[ox][oy]
-					totalR += int(c.R)
-					totalG += int(c.G)
-					totalB += int(c.B)
-					numPixels += 1
-				}
-			}
+
+			// HACK: choose a random pixel from this region
+			ox := originalMinX + rand.Intn(originalMaxX-originalMinX)
+			oy := originalMinY + rand.Intn(originalMaxY-originalMinY)
+			c := i.pixels[ox][oy]
+			totalR += int(c.R)
+			totalG += int(c.G)
+			totalB += int(c.B)
+			numPixels += 1
+
+			//for ox := originalMinX; ox < originalMaxX; ox++ {
+			//	for oy := originalMinY; oy < originalMaxY; oy++ {
+			//		c := i.pixels[ox][oy]
+			//		totalR += int(c.R)
+			//		totalG += int(c.G)
+			//		totalB += int(c.B)
+			//		numPixels += 1
+			//	}
+			//}
 			avgColor := &mycolor.MyColor{}
 			avgColor.R = uint8(float64(totalR) / float64(numPixels))
 			avgColor.G = uint8(float64(totalG) / float64(numPixels))
