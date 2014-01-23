@@ -43,17 +43,18 @@ func sortPixels(inFn, outFn string) {
 
 func congregatePixels(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
+	myImage = myImage.Thumbnail(0.2)
 
 	fmt.Println("  scrambling")
 	myImage.SortColumns("random", THREADPOOL_SIZE)
 	myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  congregating")
-	for ii := 0; ii < 10; ii++ {
-		myImage.Congregate(5, 25) // thumb size in pixels, percent of image visited per iteration
+	for ii := 0; ii < 1; ii++ {
+		myImage.Congregate(50) // thumb size in pixels, percent of image visited per iteration
 		tempFn := outFn + "." + fmt.Sprintf("%03d", ii) + ".png"
 		fmt.Println(tempFn)
-		//myImage.SaveAs(tempFn)
+		myImage.SaveAs(tempFn)
 	}
 
 	//fmt.Println("  showing thumb")

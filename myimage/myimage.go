@@ -275,7 +275,7 @@ func (i *MyImage) thumbPixelFitness(color *mycolor.MyColor, x int, y int, thumb 
 	return colorSimilarity(color, thumbColor)
 }
 
-func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int, thumb *MyImage) float64 {
+func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int) float64 {
 	idealRad := 1 - (float64(color.S)+float64(color.V))/2
 	idealRad *= 1
 	idealTheta := float64(color.H) * 2 * math.Pi
@@ -289,21 +289,13 @@ func (i *MyImage) colorPosPixelFitness(color *mycolor.MyColor, x int, y int, thu
 }
 
 // Modify the image in-place by swapping pixels to places where they match their neighbors.
-func (i *MyImage) Congregate(thumbPixels int, numIters float64) {
-	thumbRatio := (float64(thumbPixels) + 0.01) / float64(utils.IntMin(i.xres, i.yres))
-	thumb := i.Thumbnail(thumbRatio)
-
+func (i *MyImage) Congregate(numIters float64) {
 	numPixels := int(numIters * float64(i.xres*i.yres))
 	for ii := 0; ii < numPixels; ii++ {
 		if ii%300000 == 0 {
 			pctDone := float64(int(float64(ii)/float64(numPixels)*1000)) / 10
 			fmt.Println(pctDone)
 		}
-
-		//// occasionally re-make the thumbnail
-		//if ii%1000 == 0 {
-		//    thumb := i.Thumbnail(0.1)
-		//}
 
 		// choose two random pixels
 		x1 := rand.Intn(i.xres)
@@ -318,8 +310,8 @@ func (i *MyImage) Congregate(thumbPixels int, numIters float64) {
 		c2 := i.pixels[x2][y2]
 
 		// if swapping them would improve their total fitness, swap them
-		originalFitness := i.colorPosPixelFitness(c1, x1, y1, thumb) + i.colorPosPixelFitness(c2, x2, y2, thumb)
-		swappedFitness := i.colorPosPixelFitness(c2, x1, y1, thumb) + i.colorPosPixelFitness(c1, x2, y2, thumb)
+		originalFitness := i.colorPosPixelFitness(c1, x1, y1) + i.colorPosPixelFitness(c2, x2, y2)
+		swappedFitness := i.colorPosPixelFitness(c2, x1, y1) + i.colorPosPixelFitness(c1, x2, y2)
 		if swappedFitness > originalFitness {
 			i.pixels[x1][y1] = c2
 			i.pixels[x2][y2] = c1
