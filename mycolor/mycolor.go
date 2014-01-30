@@ -41,9 +41,11 @@ func (c *MyColor) SetSortValue(kind string, ii int) {
 			c.SortValue -= 900
 		}
 	case "v":
-		c.SortValue = c.V
+		c.SortValue = -c.V
 	case "s":
 		c.SortValue = c.S
+	case "sv":
+		c.SortValue = 0.5*(1-c.V) + 0.5*(1-c.S)
 	default:
 		panic("bad sort kind: " + kind)
 	}

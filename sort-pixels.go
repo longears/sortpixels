@@ -28,15 +28,28 @@ func init() {
 // sort the pixels,
 // and save the result to the path outFn.
 // Return an error if the input file is not decodable as an image.
-func sortPixels(inFn, outFn string) {
+func sortPixelsValue(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
 
-	fmt.Println("  sorting")
+	fmt.Println("  sorting using value")
 	for ii := 0; ii < N_SORTS; ii++ {
 		myImage.SortColumns("v", THREADPOOL_SIZE)
 		myImage.SortRows("h2", THREADPOOL_SIZE)
 	}
 	myImage.SortColumns("v", THREADPOOL_SIZE)
+
+	myImage.SaveAs(outFn)
+}
+
+func sortPixelsSaturationValue(inFn, outFn string) {
+	myImage := myimage.MakeMyImageFromPath(inFn)
+
+	fmt.Println("  sorting using saturation and value")
+	for ii := 0; ii < N_SORTS; ii++ {
+		myImage.SortColumns("sv", THREADPOOL_SIZE)
+		myImage.SortRows("h2", THREADPOOL_SIZE)
+	}
+	myImage.SortColumns("sv", THREADPOOL_SIZE)
 
 	myImage.SaveAs(outFn)
 }
@@ -57,6 +70,34 @@ func congregatePixels(inFn, outFn string) {
 	myImage.Congregate(8, 75) // maxMoveDist, percent of image visited per iteration
 
 	myImage.SaveAs(outFn)
+}
+
+func transformImage(inFn, tag string, transformFunction func(string, string)) {
+	// build outFn from inFn
+	outFn := inFn
+	if strings.Contains(outFn, ".") {
+		dotii := strings.LastIndex(outFn, ".")
+		outFn = outFn[:dotii] + "." + tag + ".png"
+	} else {
+		outFn += "." + tag
+	}
+	if strings.Contains(outFn, "/") {
+		outFn = outFn[strings.LastIndex(outFn, "/")+1:]
+	}
+	outFn = "output/" + outFn
+
+	// read, sort, and save (unless file has already been sorted)
+	fmt.Println(inFn)
+	if utils.PathExists(outFn) {
+		fmt.Println("  SKIPPING: already exists")
+	} else {
+		transformFunction(inFn, outFn)
+	}
+
+	// attempt to give memory back to the OS
+	debug.FreeOSMemory()
+
+	fmt.Println()
 }
 
 //================================================================================
@@ -88,55 +129,8 @@ func main() {
 	for inputII := 1; inputII < len(os.Args); inputII++ {
 		inFn := os.Args[inputII]
 
-		// build outFn from inFn
-		outFn := inFn
-		if strings.Contains(outFn, ".") {
-			dotii := strings.LastIndex(outFn, ".")
-			outFn = outFn[:dotii] + ".congregated.png"
-		} else {
-			outFn += ".congregated"
-		}
-		if strings.Contains(outFn, "/") {
-			outFn = outFn[strings.LastIndex(outFn, "/")+1:]
-		}
-		outFn = "output/" + outFn
-
-		// read, sort, and save (unless file has already been sorted)
-		fmt.Println(inFn)
-		if utils.PathExists(outFn) {
-			fmt.Println("  SKIPPING: already exists")
-		} else {
-			congregatePixels(inFn, outFn)
-		}
-
-		// attempt to give memory back to the OS
-		debug.FreeOSMemory()
-
-
-		// build outFn from inFn
-		outFn = inFn
-		if strings.Contains(outFn, ".") {
-			dotii := strings.LastIndex(outFn, ".")
-			outFn = outFn[:dotii] + ".sorted.png"
-		} else {
-			outFn += ".sorted"
-		}
-		if strings.Contains(outFn, "/") {
-			outFn = outFn[strings.LastIndex(outFn, "/")+1:]
-		}
-		outFn = "output/" + outFn
-
-		// read, sort, and save (unless file has already been sorted)
-		fmt.Println(inFn)
-		if utils.PathExists(outFn) {
-			fmt.Println("  SKIPPING: already exists")
-		} else {
-			sortPixels(inFn, outFn)
-		}
-
-		// attempt to give memory back to the OS
-		debug.FreeOSMemory()
-
-		fmt.Println()
+		transformImage(inFn, "sorted_v", sortPixelsValue)
+		transformImage(inFn, "sorted_sv", sortPixelsSaturationValue)
+		transformImage(inFn, "congregated", congregatePixels)
 	}
 }
