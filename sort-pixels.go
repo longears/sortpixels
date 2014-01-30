@@ -92,6 +92,31 @@ func main() {
 		outFn := inFn
 		if strings.Contains(outFn, ".") {
 			dotii := strings.LastIndex(outFn, ".")
+			outFn = outFn[:dotii] + ".congregated.png"
+		} else {
+			outFn += ".congregated"
+		}
+		if strings.Contains(outFn, "/") {
+			outFn = outFn[strings.LastIndex(outFn, "/")+1:]
+		}
+		outFn = "output/" + outFn
+
+		// read, sort, and save (unless file has already been sorted)
+		fmt.Println(inFn)
+		if utils.PathExists(outFn) {
+			fmt.Println("  SKIPPING: already exists")
+		} else {
+			congregatePixels(inFn, outFn)
+		}
+
+		// attempt to give memory back to the OS
+		debug.FreeOSMemory()
+
+
+		// build outFn from inFn
+		outFn = inFn
+		if strings.Contains(outFn, ".") {
+			dotii := strings.LastIndex(outFn, ".")
 			outFn = outFn[:dotii] + ".sorted.png"
 		} else {
 			outFn += ".sorted"
@@ -106,8 +131,7 @@ func main() {
 		if utils.PathExists(outFn) {
 			fmt.Println("  SKIPPING: already exists")
 		} else {
-			//sortPixels(inFn, outFn)
-			congregatePixels(inFn, outFn)
+			sortPixels(inFn, outFn)
 		}
 
 		// attempt to give memory back to the OS
