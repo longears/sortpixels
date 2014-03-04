@@ -31,6 +31,10 @@ func init() {
 func sortPixelsValue(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
 
+	fmt.Println("  scrambling")
+	myImage.SortColumns("random", THREADPOOL_SIZE)
+	myImage.SortRows("random", THREADPOOL_SIZE)
+
 	fmt.Println("  sorting using value")
 	for ii := 0; ii < N_SORTS; ii++ {
 		myImage.SortColumns("v", THREADPOOL_SIZE)
@@ -43,6 +47,10 @@ func sortPixelsValue(inFn, outFn string) {
 
 func sortPixelsSaturationValue(inFn, outFn string) {
 	myImage := myimage.MakeMyImageFromPath(inFn)
+
+	fmt.Println("  scrambling")
+	myImage.SortColumns("random", THREADPOOL_SIZE)
+	myImage.SortRows("random", THREADPOOL_SIZE)
 
 	fmt.Println("  sorting using saturation and value")
 	for ii := 0; ii < N_SORTS; ii++ {
