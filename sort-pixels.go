@@ -137,8 +137,8 @@ func main() {
 	for inputII := 1; inputII < len(os.Args); inputII++ {
 		inFn := os.Args[inputII]
 
-		transformImage(inFn, "sorted_v", sortPixelsValue)
-		transformImage(inFn, "sorted_sv", sortPixelsSaturationValue)
+//		transformImage(inFn, "sorted_v", sortPixelsValue)
+//		transformImage(inFn, "sorted_sv", sortPixelsSaturationValue)
 		transformImage(inFn, "congregated", congregatePixels)
 	}
 }
